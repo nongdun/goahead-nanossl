@@ -1,6 +1,23 @@
 /*
     nanossl.c - Mocana NanoSSL for GoAhead
 
+    This is the interface between GoAhead and the NanoSSL stack.
+
+    This software is supplied as-is. It is not supported under an Embedthis Commerical License or
+    Appweb Maintenance Agreement.
+
+    At a minimum, the following should be defined in NanoSSL src/common/moptions_custom.h
+
+    #define __ENABLE_MOCANA_SSL_SERVER__                1
+    #define __ENABLE_MOCANA_PEM_CONVERSION__            1
+    #define __MOCANA_DUMP_CONSOLE_TO_STDOUT__           1
+    #define __ENABLE_MOCANA_SSL_CIPHER_SUITES_SELECT__  1
+
+    #if ME_DEBUG
+    #define __ENABLE_ALL_DEBUGGING__                    1
+    #define __ENABLE_MOCANA_DEBUG_CONSOLE__             1
+    #endif
+
     Copyright (c) All Rights Reserved. See details at the end of the file.
  */
 
@@ -9,8 +26,21 @@
 #include    "me.h"
 
 #if ME_COM_NANOSSL
- #include "goahead.h"
+#if WINDOWS
+    #define __RTOS_WIN32__
+#elif MACOSX
+    #define __RTOS_OSX__
+#elif VXWORKS
+    #define __RTOS_VXWORKS__
+#else
+    #define __RTOS_LINUX__
+#endif
 
+#include "goahead.h"
+
+/*
+    Indent includes to bypass MakeMe dependencies
+ */
  #include "common/moptions.h"
  #include "common/mdefs.h"
  #include "common/mtypes.h"
@@ -29,6 +59,9 @@
 
 /************************************* Defines ********************************/
 
+#define KEY_SIZE       1024
+#define MAX_CIPHERS    32
+
 static certDescriptor  cert;
 static certDescriptor  ca;
 
@@ -42,21 +75,16 @@ typedef struct Nano {
 } Nano;
 
 #if ME_DEBUG
-    #define SSL_HELLO_TIMEOUT   15000
-    #define SSL_RECV_TIMEOUT    300000
-#else
     #define SSL_HELLO_TIMEOUT   15000000
     #define SSL_RECV_TIMEOUT    30000000
+#else
+    #define SSL_HELLO_TIMEOUT   15000
+    #define SSL_RECV_TIMEOUT    300000
 #endif
-
-#define KEY_SIZE                1024
-#define MAX_CIPHERS             16
 
 /***************************** Forward Declarations ***************************/
 
 static void     nanoLog(sbyte4 module, sbyte4 severity, sbyte *msg);
-static void     DEBUG_PRINT(void *where, void *msg);
-static void     DEBUG_PRINTNL(void *where, void *msg);
 
 /************************************* Code ***********************************/
 /*
@@ -128,7 +156,6 @@ PUBLIC int sslOpen()
         }
         MOCANA_freeReadFile(&tmp.pCertificate);
     }
-
     if (SSL_initServerCert(&cert, FALSE, 0)) {
         error("SSL_initServerCert failed");
         return -1;
@@ -192,10 +219,12 @@ PUBLIC int sslUpgrade(Webs *wp)
 static int nanoHandshake(Webs *wp)
 {
     Nano        *np;
+    WebsSocket  *sp;
     ubyte4      flags;
     int         rc;
 
     np = (Nano*) wp->ssl;
+    sp = socketPtr(wp->sid);
     wp->flags |= SOCKET_HANDSHAKING;
     SSL_getSessionFlags(np->handle, &flags);
     if (ME_GOAHEAD_VERIFY_PEER) {
@@ -221,17 +250,19 @@ static int nanoHandshake(Webs *wp)
     if (rc < 0) {
         if (rc == ERR_SSL_UNKNOWN_CERTIFICATE_AUTHORITY) {
             logmsg(3, "Unknown certificate authority");
-
-        /* Common name mismatch, cert revoked */
+        } else if (rc == ERR_SSL_NO_CIPHER_MATCH) {
+            logmsg(3, "No cipher match");
         } else if (rc == ERR_SSL_PROTOCOL_PROCESS_CERTIFICATE) {
             logmsg(3, "Bad certificate");
         } else if (rc == ERR_SSL_NO_SELF_SIGNED_CERTIFICATES) {
             logmsg(3, "Self-signed certificate");
         } else if (rc == ERR_SSL_CERT_VALIDATION_FAILED) {
             logmsg(3, "Certificate does not validate");
+        } else if (rc == ERR_TCP_SOCKET_CLOSED) {
+            logmsg(3, "Peer closed connection");
         }
-        DISPLAY_ERROR(0, rc); 
         logmsg(4, "NanoSSL: Cannot handshake: error %d", rc);
+        sp->flags |= SOCKET_EOF;
         errno = EPROTO;
         return -1;
     }
@@ -319,16 +350,6 @@ PUBLIC ssize sslWrite(Webs *wp, void *buf, ssize len)
     return totalWritten;
 }
 
-
-static void DEBUG_PRINT(void *where, void *msg)
-{
-    logmsg(2, "%s", msg);
-}
-
-static void DEBUG_PRINTNL(void *where, void *msg)
-{
-    logmsg(2, "%s", msg);
-}
 
 static void nanoLog(sbyte4 module, sbyte4 severity, sbyte *msg)
 {

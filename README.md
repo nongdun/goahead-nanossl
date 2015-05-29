@@ -7,15 +7,18 @@ NanoSSL stack interface.
 
     pak install goahead-nanossl
 
-
 ## Configuration
 
     ./configure --with nanossl
 
-
 ## Building
 
     me
+
+## Support
+
+This software is supplied as-is. It is not supported under an Embedthis Commerical
+License or GoAhead Maintenance Agreement.
 
 ## Get Pak
 
