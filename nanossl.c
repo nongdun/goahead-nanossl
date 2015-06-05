@@ -144,26 +144,6 @@ PUBLIC int sslOpen()
         }
         MOCANA_freeReadFile(&tmp.pKeyBlob);    
     }
-#if FUTURE
-static certDescriptor  ca;
-{
-    cchar *cacert = *ME_GOAHEAD_CA ? ME_GOAHEAD_CA: 0;
-    if (cacert) {
-        certDescriptor tmp;
-        if ((rc = MOCANA_readFile((sbyte*) cacert, &tmp.pCertificate, &tmp.certLength)) < 0) {
-            error("NanoSSL: Unable to read CA certificate file %s", cacert); 
-            CA_MGMT_freeCertificate(&tmp);
-            return -1;
-        }
-        if ((rc = CA_MGMT_decodeCertificate(tmp.pCertificate, tmp.certLength, &ca.pCertificate, &ca.certLength)) < 0) {
-            error("NanoSSL: Unable to decode PEM certificate %s", cacert); 
-            CA_MGMT_freeCertificate(&tmp);
-            return -1;
-        }
-        MOCANA_freeReadFile(&tmp.pCertificate);
-    }
-}
-#endif
     if (SSL_initServerCert(&cert, FALSE, 0)) {
         error("SSL_initServerCert failed");
         return -1;
