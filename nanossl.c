@@ -18,6 +18,11 @@
     #define __ENABLE_MOCANA_DEBUG_CONSOLE__             1
     #endif
 
+    Notes:
+    - NanoSSL does not support virtual servers or multiple configurations
+    - NanoSSL sometimes returns invalid ASN.1 to clients
+    - This module does not support verification of client certificates
+
     Copyright (c) All Rights Reserved. See details at the end of the file.
  */
 
@@ -63,7 +68,6 @@
 #define MAX_CIPHERS    32
 
 static certDescriptor  cert;
-static certDescriptor  ca;
 
 /*
     Per socket state
@@ -84,7 +88,7 @@ typedef struct Nano {
 
 /***************************** Forward Declarations ***************************/
 
-static void     nanoLog(sbyte4 module, sbyte4 severity, sbyte *msg);
+static void nanoLog(sbyte4 module, sbyte4 severity, sbyte *msg);
 
 /************************************* Code ***********************************/
 /*
@@ -93,7 +97,7 @@ static void     nanoLog(sbyte4 module, sbyte4 severity, sbyte *msg);
 PUBLIC int sslOpen()
 {
     sslSettings     *settings;
-    char            *certificate, *key, *cacert;
+    char            *certificate, *key;
     int             rc;
 
     if (MOCANA_initMocana() < 0) {
@@ -109,7 +113,6 @@ PUBLIC int sslOpen()
 
     certificate = *ME_GOAHEAD_CERTIFICATE ? ME_GOAHEAD_CERTIFICATE : 0;
     key = *ME_GOAHEAD_KEY ? ME_GOAHEAD_KEY : 0;
-    cacert = *ME_GOAHEAD_CA ? ME_GOAHEAD_CA: 0;
 
     if (certificate) {
         certDescriptor tmp;
@@ -141,6 +144,10 @@ PUBLIC int sslOpen()
         }
         MOCANA_freeReadFile(&tmp.pKeyBlob);    
     }
+#if FUTURE
+static certDescriptor  ca;
+{
+    cchar *cacert = *ME_GOAHEAD_CA ? ME_GOAHEAD_CA: 0;
     if (cacert) {
         certDescriptor tmp;
         if ((rc = MOCANA_readFile((sbyte*) cacert, &tmp.pCertificate, &tmp.certLength)) < 0) {
@@ -148,14 +155,15 @@ PUBLIC int sslOpen()
             CA_MGMT_freeCertificate(&tmp);
             return -1;
         }
-        if ((rc = CA_MGMT_decodeCertificate(tmp.pCertificate, tmp.certLength, &ca.pCertificate, 
-                &ca.certLength)) < 0) {
+        if ((rc = CA_MGMT_decodeCertificate(tmp.pCertificate, tmp.certLength, &ca.pCertificate, &ca.certLength)) < 0) {
             error("NanoSSL: Unable to decode PEM certificate %s", cacert); 
             CA_MGMT_freeCertificate(&tmp);
             return -1;
         }
         MOCANA_freeReadFile(&tmp.pCertificate);
     }
+}
+#endif
     if (SSL_initServerCert(&cert, FALSE, 0)) {
         error("SSL_initServerCert failed");
         return -1;
