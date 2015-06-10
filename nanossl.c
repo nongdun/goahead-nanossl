@@ -31,6 +31,7 @@
 #include    "me.h"
 
 #if ME_COM_NANOSSL
+
 #if WINDOWS
     #define __RTOS_WIN32__
 #elif MACOSX
@@ -111,8 +112,8 @@ PUBLIC int sslOpen()
         return -1;
     }
 
-    certificate = *ME_GOAHEAD_CERTIFICATE ? ME_GOAHEAD_CERTIFICATE : 0;
-    key = *ME_GOAHEAD_KEY ? ME_GOAHEAD_KEY : 0;
+    certificate = *ME_GOAHEAD_SSL_CERTIFICATE ? ME_GOAHEAD_SSL_CERTIFICATE : 0;
+    key = *ME_GOAHEAD_SSL_KEY ? ME_GOAHEAD_SSL_KEY : 0;
 
     if (certificate) {
         certDescriptor tmp;
@@ -215,7 +216,7 @@ static int nanoHandshake(Webs *wp)
     sp = socketPtr(wp->sid);
     wp->flags |= SOCKET_HANDSHAKING;
     SSL_getSessionFlags(np->handle, &flags);
-    if (ME_GOAHEAD_VERIFY_PEER) {
+    if (ME_GOAHEAD_SSL_VERIFY_PEER) {
         flags |= SSL_FLAG_REQUIRE_MUTUAL_AUTH;
     } else {
         flags |= SSL_FLAG_NO_MUTUAL_AUTH_REQUEST;
