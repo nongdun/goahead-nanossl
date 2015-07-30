@@ -2,7 +2,7 @@
     "name": "goahead-nanossl",
     "title": "NanoSSL Support",
     "description": "NanoSSL Support for GoAhead",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "keywords": [
         "me",
         "ssl",

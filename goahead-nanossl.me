@@ -1,5 +1,5 @@
 /*
-    nanossl.me -- Mocana NanoSSL Component for GoAhead
+    goahead-nanossl.me -- Mocana NanoSSL Component for GoAhead
  */
 
 Me.load({ 
@@ -9,7 +9,6 @@ Me.load({
             config: function (target) {
                 if (me.options.gen) {
                     return {
-                        path: me.dir.bin.join('libnanossl').joinExt(me.ext.lib),
                         includes: [ '$(ME_COM_NANOSSL_PATH)/src' ],
                         libpaths: [ '$(ME_COM_NANOSSL_PATH)/bin' ],
                         libraries: [ 'libssls' ],
@@ -20,7 +19,6 @@ Me.load({
                 let path = lib.dirname.parent
                 let incdir = probe('common/moptions.h', {search: [path.join('src')]}).absolute
                 return {
-                    path:      me.dir.bin.join('libnanossl').joinExt(me.ext.lib),
                     includes:  [ incdir, me.dir.inc ]
                     libpaths:  [ lib.dirname ]
                     libraries: [ 'libssls' ]
@@ -28,10 +26,25 @@ Me.load({
                 }
             },
             ifdef:     [ 'ssl' ],
-            conflicts: [ 'est', 'matrixssl', 'openssl' ],
-            type:      'lib',
-            static:    true,
-            sources:   [ '*.c' ],
+            conflicts: [ 'mbedtls', 'matrixssl', 'openssl' ],
+            depends:   [ 'libgoahead-nanossl' ],
+        },
+
+        'libgoahead-nanossl': {
+            description:  'GoAhead NanoSSL Interface',
+            type:         'lib',
+            static:       true,
+            path:         '${BIN}/libgoahead-nanossl${ARLIB}',
+            ifdef:        [ 'nanossl' ],
+            sources:      [ '*.c' ],
+            postresolve: `
+                let target = me.target
+                let nanossl = me.targets.nanossl
+
+                target.includes += nanossl.includes
+                target.libpaths += nanossl.libpaths
+                target.libraries += nanossl.libraries
+            `
         }
     }
 })

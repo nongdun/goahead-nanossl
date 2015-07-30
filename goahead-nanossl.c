@@ -1,5 +1,5 @@
 /*
-    nanossl.c - Mocana NanoSSL for GoAhead
+    goahead-nanossl.c - Mocana NanoSSL for GoAhead
 
     This is the interface between GoAhead and the NanoSSL stack.
 
