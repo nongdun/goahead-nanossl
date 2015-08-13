@@ -2,7 +2,7 @@
     "name": "goahead-nanossl",
     "title": "NanoSSL Support",
     "description": "NanoSSL Support for GoAhead",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "keywords": [
         "me",
         "ssl",
@@ -30,6 +30,9 @@
             "url": "https://embedthis.com/licensing/"
         }
     ],
+    "devDependencies": {
+        "makeme": ">=0.9.2"
+    },
     "pak": {
         "export": [
             "*.c",
