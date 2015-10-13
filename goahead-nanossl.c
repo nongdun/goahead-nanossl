@@ -320,11 +320,13 @@ PUBLIC ssize sslWrite(Webs *wp, void *buf, ssize len)
     do {
         rc = sent = SSL_send(np->handle, (sbyte*) buf, (int) len);
         logmsg(7, "NanoSSL: written %d, requested len %d", sent, len);
-        if (rc <= 0) {
+        if (rc < 0) {
             logmsg(0, "NanoSSL: SSL_send failed sent %d", rc);
             sp = socketPtr(wp->sid);
             sp->flags |= SOCKET_EOF;
             return -1;
+        } else {
+            break;
         }
         totalWritten += sent;
         buf = (void*) ((char*) buf + sent);
