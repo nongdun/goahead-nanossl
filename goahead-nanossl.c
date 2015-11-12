@@ -277,19 +277,18 @@ PUBLIC ssize sslRead(Webs *wp, void *buf, ssize len)
     if (!np->connected && (rc = nanoHandshake(wp)) <= 0) {
         return rc;
     }
-    while (1) {
-        /*
-            This will do the actual blocking I/O
-         */
-        rc = SSL_recv(np->handle, buf, (sbyte4) len, &nbytes, 0);
-        logmsg(5, "NanoSSL: ssl_read %d", rc);
-        if (rc < 0) {
-            if (rc != ERR_TCP_READ_ERROR) {
-                sp->flags |= SOCKET_EOF;
-            }
-            return -1;
+    /*
+        The socket is non-blocking, however SSL_recv will block if no I/O event.
+        We should only come here if there is an I/O event, but for safety, set the timeout to 1 (zero blocks).
+     */
+    nbytes = 0;
+    rc = SSL_recv(np->handle, buf, (sbyte4) len, &nbytes, 0);
+    logmsg(5, "NanoSSL: ssl_read %d", rc);
+    if (rc < 0) {
+        if (rc != ERR_TCP_READ_ERROR) {
+            sp->flags |= SOCKET_EOF;
         }
-        break;
+        return -1;
     }
     SSL_recvPending(np->handle, &count);
     if (count > 0) {
